@@ -2,17 +2,18 @@ import { signJWT } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-    // Helper to find env vars even if they have prefixes or weird casing
-    const getEnv = (key: string) => {
-        const foundKey = Object.keys(process.env).find(k => k.toUpperCase().includes(key.toUpperCase()));
-        return foundKey ? process.env[foundKey]?.trim() : undefined;
-    };
+    // 🔍 AGGRESSIVE DIAGNOSTIC
+    console.log("--- VERCEL ENV SCAN ---");
+    console.log("Total ENV Keys:", Object.keys(process.env).length);
+    console.log("Sample Keys:", Object.keys(process.env).slice(0, 5));
+    console.log("Direct Check (ADMIN_PASSWORD):", process.env.ADMIN_PASSWORD ? "EXISTS" : "MISSING");
+    console.log("Direct Check (JWT_SECRET):", process.env.JWT_SECRET ? "EXISTS" : "MISSING");
 
     const VALID_USERS = [
-        { email: "admin@abhivairavan.com", password: getEnv("ADMIN_PASSWORD"), role: "admin" },
-        { email: "kolathur@abhivairavan.com", password: getEnv("KOLATHUR_PASSWORD"), role: "branch", branchName: "Kolathur" },
-        { email: "velacherry@abhivairavan.com", password: getEnv("VELACHERRY_PASSWORD"), role: "branch", branchName: "Velacherry" },
-        { email: "kodambakkam@abhivairavan.com", password: getEnv("KODAMBAKKAM_PASSWORD"), role: "branch", branchName: "Kodambakkam" },
+        { email: "admin@abhivairavan.com", password: (process.env.ADMIN_PASSWORD || "").trim(), role: "admin" },
+        { email: "kolathur@abhivairavan.com", password: (process.env.KOLATHUR_PASSWORD || "").trim(), role: "branch", branchName: "Kolathur" },
+        { email: "velacherry@abhivairavan.com", password: (process.env.VELACHERRY_PASSWORD || "").trim(), role: "branch", branchName: "Velacherry" },
+        { email: "kodambakkam@abhivairavan.com", password: (process.env.KODAMBAKKAM_PASSWORD || "").trim(), role: "branch", branchName: "Kodambakkam" },
     ];
 
     try {
