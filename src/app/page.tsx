@@ -1,6 +1,6 @@
 import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import AdminDashboard from "@/components/AdminDashboard";
+import AdminDashboard, { AnalyticsEntry } from "@/components/AdminDashboard";
 import BranchPortal from "@/components/BranchPortal";
 import { getRetailEntriesRaw } from "@/lib/google-sheets";
 
@@ -13,7 +13,7 @@ export default async function Home() {
 
   // Admin View
   if (user.role === "admin") {
-    let data = [];
+    let data: AnalyticsEntry[] = [];
     try {
       const rawRows = await getRetailEntriesRaw();
       data = rawRows.map((row) => ({
