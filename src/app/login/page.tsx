@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 
@@ -17,18 +16,22 @@ export default function LoginPage() {
         setLoading(true);
         setError("");
 
-        const result = await signIn("credentials", {
-            email,
-            password,
-            redirect: false,
-        });
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                body: JSON.stringify({ email, password }),
+            });
 
-        if (result?.error) {
-            setError("Invalid credentials. Please try again.");
-            setLoading(false);
-        } else {
+            if (!res.ok) {
+                throw new Error("Invalid credentials");
+            }
+
             router.push("/");
             router.refresh();
+        } catch (err) {
+            setError("Invalid credentials. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 

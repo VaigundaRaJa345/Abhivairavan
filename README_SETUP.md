@@ -1,47 +1,35 @@
-# Abhivairavan RetailOS - Setup Guide
+# Abhivairavan RetailOS - Setup Guide (Strict Mode)
 
-This application uses the Google Sheets API to store and retrieve data. Follow these steps to set it up:
+This application uses a custom JWT-based authentication system and integrates directly with the Google Sheets API.
 
-## 1. Create a Google Cloud Project
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project named `Abhivairavan-RetailOS`.
-3. Enable the **Google Sheets API**.
+## 1. Google Cloud Setup
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable **Google Sheets API**.
+3. Create a **Service Account** and download its **JSON** key file.
+4. **IMPORTANT**: Share your Google Sheet with the `client_email` found in your JSON file (give it **Editor** access).
 
-## 2. Create a Service Account
-1. In the Google Cloud Console, go to **Credentials**.
-2. Click **Create Credentials** > **Service Account**.
-3. Name it `sheets-service` and click **Create and Continue**.
-4. Grant the role **Editor** to the service account (optional but recommended for simplicity).
-5. Once created, click on the service account email.
-6. Go to the **Keys** tab and click **Add Key** > **Create New Key**.
-7. Select **JSON** and download the file.
-
-## 3. Set Up the Google Sheet
-1. Create a new Google Sheet.
-2. Name the first tab `Sheet1`.
-3. Add the following headers in the first row (A1 to G1):
-   `Timestamp`, `Date`, `Branch Name`, `Walk-ins`, `Sales`, `Source`, `Top Brand`
-4. **IMPORTANT**: Share the Google Sheet with the service account email (the one from step 2) and give it **Editor** access.
-5. Copy the **Spreadsheet ID** from the URL:
-   `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0`
-
-## 4. Configure Environment Variables
-Create or update your `.env.local` file with the following:
+## 2. Environment Variables (.env.local)
+Copy the entire contents of your Service Account JSON file into `GOOGLE_SERVICE_ACCOUNT_JSON`.
 
 ```env
-# From the downloaded JSON key file
-GOOGLE_SERVICE_ACCOUNT_EMAIL="your-service-account@project-id.iam.gserviceaccount.com"
-GOOGLE_PRIVATE_KEY="---BEGIN PRIVATE KEY---\n...\n---END PRIVATE KEY---\n"
+JWT_SECRET="generate-a-long-random-string"
+GOOGLE_SHEET_ID="your-spreadsheet-id"
 
-# From the URL of your Google Sheet
-GOOGLE_SHEET_ID="your-spreadsheet-id-from-url"
+# The entire JSON content of your service account key file
+GOOGLE_SERVICE_ACCOUNT_JSON='{"type": "service_account", ...}'
 
-# NextAuth Configuration
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="any-random-long-string"
+# Passwords
+ADMIN_PASSWORD="your-admin-password"
+KOLATHUR_PASSWORD="your-branch-password"
+VELACHERRY_PASSWORD="your-branch-password"
+KODAMBAKKAM_PASSWORD="your-branch-password"
 ```
 
-## 5. Deployment
-When deploying to Vercel:
-1. Copy all values from `.env.local` to the Vercel Project Settings > Environment Variables.
-2. Ensure the `GOOGLE_PRIVATE_KEY` includes the `\n` characters exactly as they appear in the JSON file (but wrapped in quotes).
+## 3. Google Sheet Schema
+The sheet **must** have a tab named `Sheet1` with the following columns:
+A: Timestamp | B: Date | C: Branch Name | D: Walk-ins | E: Sales (INR) | F: Source | G: Top Brand
+
+## 4. Development & Deployment
+1. `npm install`
+2. `npm run dev`
+3. Deploy to Vercel and ensure all environment variables are set correctly in the dashboard.

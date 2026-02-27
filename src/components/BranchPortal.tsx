@@ -5,25 +5,15 @@ import { format } from "date-fns";
 import { Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SOURCES = [
-    "Google Ads",
-    "Facebook/Instagram",
-    "Word of Mouth",
-    "Walk-by",
-    "JustDial",
-    "Old Customer",
-    "Architect/Contractor",
-    "Other",
-];
-
+const SOURCES = ["Google Ads", "Meta Ads", "Walk-by", "Referral", "Other"];
 const BRANDS = ["Jaquar", "Kohler", "Grohe", "Parryware", "Other"];
 
 export default function BranchPortal({ branchName }: { branchName: string }) {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [walkins, setWalkins] = useState("");
-    const [revenue, setRevenue] = useState("");
+    const [sales, setSales] = useState("");
     const [source, setSource] = useState("");
-    const [topBrand, setTopBrand] = useState("");
+    const [brand, setBrand] = useState("");
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
@@ -33,16 +23,15 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
         setStatus("idle");
 
         try {
-            const res = await fetch("/api/entries", {
+            const res = await fetch("/api/submit-report", {
                 method: "POST",
                 body: JSON.stringify({
                     date,
-                    branchName,
+                    branch: branchName,
                     walkins: parseInt(walkins),
-                    revenue: parseFloat(revenue),
+                    sales: parseFloat(sales),
                     source,
-                    topBrand,
-                    timestamp: new Date().toISOString(),
+                    brand,
                 }),
             });
 
@@ -50,9 +39,9 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
 
             setStatus("success");
             setWalkins("");
-            setRevenue("");
+            setSales("");
             setSource("");
-            setTopBrand("");
+            setBrand("");
 
             setTimeout(() => setStatus("idle"), 5000);
         } catch (err) {
@@ -106,14 +95,14 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Total Sales Revenue (INR)
+                            Total Sales (INR)
                         </label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
                             <input
                                 type="number"
-                                value={revenue}
-                                onChange={(e) => setRevenue(e.target.value)}
+                                value={sales}
+                                onChange={(e) => setSales(e.target.value)}
                                 className="input-field pl-8"
                                 placeholder="0.00"
                                 step="0.01"
@@ -144,8 +133,8 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                             Top Selling Brand Today
                         </label>
                         <select
-                            value={topBrand}
-                            onChange={(e) => setTopBrand(e.target.value)}
+                            value={brand}
+                            onChange={(e) => setBrand(e.target.value)}
                             className="input-field"
                             required
                         >
@@ -175,7 +164,7 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                                 className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 italic"
                             >
                                 <AlertCircle size={20} />
-                                Failed to submit. Please check your connection.
+                                Failed to submit. Please check your inputs.
                             </motion.div>
                         ) : null}
                     </AnimatePresence>
@@ -194,10 +183,6 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                     </button>
                 </form>
             </motion.div>
-
-            <div className="mt-8 text-center text-slate-400 text-sm">
-                Logged in as Branch Manager
-            </div>
         </div>
     );
 }

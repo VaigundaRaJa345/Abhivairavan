@@ -3,16 +3,25 @@
 import { useState, useMemo } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    LineChart, Line, Legend
+    LineChart, Line
 } from "recharts";
 import {
     TrendingUp, Users, DollarSign, Percent,
-    Calendar, Download, Filter
+    Download, Filter
 } from "lucide-react";
 import { format, isWithinInterval, parseISO, startOfToday, startOfWeek, startOfMonth, subDays } from "date-fns";
-import { RetailEntry } from "@/lib/google-sheets";
 
-export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
+export type AnalyticsEntry = {
+    timestamp: string;
+    date: string;
+    branch: string;
+    walkins: number;
+    sales: number;
+    source: string;
+    brand: string;
+};
+
+export default function AdminDashboard({ data }: { data: AnalyticsEntry[] }) {
     const [filterRange, setFilterRange] = useState<"all" | "today" | "week" | "month">("all");
 
     const filteredData = useMemo(() => {
@@ -27,20 +36,24 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
         else start = subDays(now, 30);
 
         return data.filter(entry => {
-            const entryDate = parseISO(entry.date);
-            return isWithinInterval(entryDate, { start, end: now });
+            try {
+                const entryDate = parseISO(entry.date);
+                return isWithinInterval(entryDate, { start, end: now });
+            } catch (e) {
+                return false;
+            }
         });
     }, [data, filterRange]);
 
     const stats = useMemo(() => {
         const totalWalkins = filteredData.reduce((acc, curr) => acc + curr.walkins, 0);
-        const totalRevenue = filteredData.reduce((acc, curr) => acc + curr.revenue, 0);
+        const totalSales = filteredData.reduce((acc, curr) => acc + curr.sales, 0);
         const conversionRate = totalWalkins > 0 ? (filteredData.length / totalWalkins) * 100 : 0;
-        const grossProfit = totalRevenue * 0.25;
+        const grossProfit = totalSales * 0.25;
 
         return {
             totalWalkins,
-            totalRevenue,
+            totalSales,
             conversionRate,
             grossProfit
         };
@@ -49,18 +62,20 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
     const branchData = useMemo(() => {
         const branches: Record<string, number> = {};
         filteredData.forEach(entry => {
-            branches[entry.branchName] = (branches[entry.branchName] || 0) + entry.walkins;
+            branches[entry.branch] = (branches[entry.branch] || 0) + entry.walkins;
         });
         return Object.entries(branches).map(([name, walkins]) => ({ name, walkins }));
     }, [filteredData]);
 
-    const revenueTrends = useMemo(() => {
+    const salesTrends = useMemo(() => {
         const trends: Record<string, number> = {};
         filteredData.slice(-15).forEach(entry => {
-            const d = format(parseISO(entry.date), "MMM dd");
-            trends[d] = (trends[d] || 0) + entry.revenue;
+            try {
+                const d = format(parseISO(entry.date), "MMM dd");
+                trends[d] = (trends[d] || 0) + entry.sales;
+            } catch (e) { }
         });
-        return Object.entries(trends).map(([date, revenue]) => ({ date, revenue }));
+        return Object.entries(trends).map(([date, sales]) => ({ date, sales }));
     }, [filteredData]);
 
     return (
@@ -77,8 +92,8 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                             key={r}
                             onClick={() => setFilterRange(r)}
                             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${filterRange === r
-                                ? "bg-slate-900 text-white shadow-md"
-                                : "text-slate-500 hover:bg-slate-50"
+                                    ? "bg-slate-900 text-white shadow-md"
+                                    : "text-slate-500 hover:bg-slate-50"
                                 }`}
                         >
                             {r.charAt(0).toUpperCase() + r.slice(1)}
@@ -97,7 +112,7 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                 />
                 <KPICard
                     title="Total Revenue"
-                    value={`₹${stats.totalRevenue.toLocaleString()}`}
+                    value={`₹${stats.totalSales.toLocaleString()}`}
                     icon={<DollarSign className="text-green-600" />}
                     trend="+8.4%"
                 />
@@ -145,7 +160,7 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                     </h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={revenueTrends}>
+                            <LineChart data={salesTrends}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
@@ -154,7 +169,7 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                                 />
                                 <Line
                                     type="monotone"
-                                    dataKey="revenue"
+                                    dataKey="sales"
                                     stroke="#D4AF37"
                                     strokeWidth={3}
                                     dot={{ r: 4, fill: '#D4AF37', strokeWidth: 2, stroke: '#fff' }}
@@ -185,7 +200,7 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                                 <th className="px-6 py-4 font-semibold">Date</th>
                                 <th className="px-6 py-4 font-semibold">Branch</th>
                                 <th className="px-6 py-4 font-semibold">Walk-ins</th>
-                                <th className="px-6 py-4 font-semibold">Revenue</th>
+                                <th className="px-6 py-4 font-semibold">Sales</th>
                                 <th className="px-6 py-4 font-semibold">Source</th>
                                 <th className="px-6 py-4 font-semibold">Top Brand</th>
                             </tr>
@@ -195,16 +210,16 @@ export default function AdminDashboard({ data }: { data: RetailEntry[] }) {
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 text-slate-600">{entry.date}</td>
                                     <td className="px-6 py-4">
-                                        <span className="font-semibold text-slate-900">{entry.branchName}</span>
+                                        <span className="font-semibold text-slate-900">{entry.branch}</span>
                                     </td>
                                     <td className="px-6 py-4 text-slate-600">{entry.walkins}</td>
-                                    <td className="px-6 py-4 text-slate-900 font-medium">₹{entry.revenue.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-slate-900 font-medium">₹{entry.sales.toLocaleString()}</td>
                                     <td className="px-6 py-4">
                                         <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
                                             {entry.source}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-slate-600">{entry.topBrand}</td>
+                                    <td className="px-6 py-4 text-slate-600">{entry.brand}</td>
                                 </tr>
                             ))}
                             {filteredData.length === 0 && (

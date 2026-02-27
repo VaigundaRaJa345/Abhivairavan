@@ -1,33 +1,46 @@
-import { getServerSession } from "next-auth/next";
+import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/AdminDashboard";
 import BranchPortal from "@/components/BranchPortal";
-import { getRetailEntries } from "@/lib/google-sheets";
+import { getRetailEntriesRaw } from "@/lib/google-sheets";
 
 export default async function Home() {
-  const session = await getServerSession();
+  const user = await getAuthUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
   // Admin View
-  if (session.user.role === "ADMIN") {
+  if (user.role === "admin") {
     let data = [];
     try {
-      data = await getRetailEntries();
+      const rawRows = await getRetailEntriesRaw();
+      data = rawRows.map((row) => ({
+        timestamp: row[0] || "",
+        date: row[1] || "",
+        branch: row[2] || "",
+        walkins: parseInt(row[3]) || 0,
+        sales: parseFloat(row[4]) || 0,
+        source: row[5] || "",
+        brand: row[6] || "",
+      }));
     } catch (e) {
-      console.error("Sheets API not configured yet:", e);
-      // Fallback data for demonstration if API keys are missing
-      data = [
-        { timestamp: new Date().toISOString(), date: "2024-03-20", branchName: "Kolathur", walkins: 15, revenue: 45000, source: "Google Ads", topBrand: "Jaquar" },
-        { timestamp: new Date().toISOString(), date: "2024-03-21", branchName: "Velacherry", walkins: 22, revenue: 120000, source: "Walk-by", topBrand: "Kohler" },
-        { timestamp: new Date().toISOString(), date: "2024-03-22", branchName: "Kodambakkam", walkins: 18, revenue: 85000, source: "JustDial", topBrand: "Grohe" },
-      ];
+      console.error("Sheets API fetch error:", e);
+      // Minimal fallback if needed
+      data = [];
     }
     return <AdminDashboard data={data} />;
   }
 
   // Branch View
-  return <BranchPortal branchName={session.user.branchName || "Unknown"} />;
+  if (user.role === "branch") {
+    return <BranchPortal branchName={user.branchName || "Unknown"} />;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+      <p className="text-slate-500">Access Denied: Unrecognized Role</p>
+    </div>
+  );
 }
