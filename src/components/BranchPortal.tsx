@@ -16,11 +16,13 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
     const [brand, setBrand] = useState("");
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setStatus("idle");
+        setErrorMessage("");
 
         try {
             const res = await fetch("/api/submit-report", {
@@ -35,7 +37,11 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                 }),
             });
 
-            if (!res.ok) throw new Error("Failed to submit");
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to submit");
+            }
 
             setStatus("success");
             setWalkins("");
@@ -44,9 +50,10 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
             setBrand("");
 
             setTimeout(() => setStatus("idle"), 5000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
             setStatus("error");
+            setErrorMessage(err.message);
         } finally {
             setLoading(false);
         }
@@ -146,7 +153,7 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                     </div>
 
                     <AnimatePresence mode="wait">
-                        {status === "success" ? (
+                        {status === "success" && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -156,7 +163,8 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                                 <CheckCircle2 size={20} />
                                 Entry submitted successfully!
                             </motion.div>
-                        ) : status === "error" ? (
+                        )}
+                        {status === "error" && (
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -164,9 +172,9 @@ export default function BranchPortal({ branchName }: { branchName: string }) {
                                 className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 italic"
                             >
                                 <AlertCircle size={20} />
-                                Failed to submit. Please check your inputs.
+                                {errorMessage || "Failed to submit. Please check your inputs."}
                             </motion.div>
-                        ) : null}
+                        )}
                     </AnimatePresence>
 
                     <button

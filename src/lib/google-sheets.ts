@@ -3,15 +3,31 @@ import { google } from "googleapis";
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 
 async function getSheetsInstance() {
-    const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || "{}");
+    const rawJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
-    const auth = new google.auth.JWT({
-        email: serviceAccount.client_email,
-        key: serviceAccount.private_key,
-        scopes: SCOPES,
-    });
+    if (!rawJson || rawJson.includes("...")) {
+        throw new Error(
+            "CRITICAL: GOOGLE_SERVICE_ACCOUNT_JSON is missing or contains placeholders ('...'). " +
+            "Please paste your real Google Service Account JSON into your environment variables."
+        );
+    }
 
-    return google.sheets({ version: "v4", auth });
+    try {
+        // Handle cases where the JSON might be wrapped in single or double quotes from the env file
+        const sanitizedJson = rawJson.trim().replace(/^['"]|['"]$/g, "");
+        const serviceAccount = JSON.parse(sanitizedJson);
+
+        const auth = new google.auth.JWT({
+            email: serviceAccount.client_email,
+            key: serviceAccount.private_key,
+            scopes: SCOPES,
+        });
+
+        return google.sheets({ version: "v4", auth });
+    } catch (err) {
+        console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", err);
+        throw new Error("Invalid GOOGLE_SERVICE_ACCOUNT_JSON format. Ensure it is valid JSON.");
+    }
 }
 
 export type RetailEntry = {
