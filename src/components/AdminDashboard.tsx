@@ -34,6 +34,15 @@ export default function AdminDashboard({ data }: { data: AnalyticsEntry[] }) {
     const [minSales, setMinSales] = useState("");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isExportOpen, setIsExportOpen] = useState(false);
+
+    // Internal state for manual filter application
+    const [pendingFilters, setPendingFilters] = useState({
+        date: "",
+        source: "All Sources",
+        minWalkins: "",
+        minSales: ""
+    });
+
     const exportRef = useRef<HTMLDivElement>(null);
     const filterRef = useRef<HTMLDivElement>(null);
 
@@ -64,27 +73,21 @@ export default function AdminDashboard({ data }: { data: AnalyticsEntry[] }) {
     const filteredData = useMemo(() => {
         let result = data;
 
-        // Branch Filter
+        // Branch Filter (Immediate)
         if (selectedBranch !== "All Branches") {
             result = result.filter(entry => entry.branch === selectedBranch);
         }
 
-        // Source Filter
+        // Manual Applied Filters
         if (selectedSource !== "All Sources") {
             result = result.filter(entry => entry.source === selectedSource);
         }
-
-        // Date Filter (Specific Search)
         if (searchDate) {
             result = result.filter(entry => entry.date.includes(searchDate));
         }
-
-        // Walk-in Filter
         if (minWalkins) {
             result = result.filter(entry => entry.walkins >= parseInt(minWalkins));
         }
-
-        // Sales Filter
         if (minSales) {
             result = result.filter(entry => entry.sales >= parseFloat(minSales));
         }
@@ -111,6 +114,21 @@ export default function AdminDashboard({ data }: { data: AnalyticsEntry[] }) {
 
         return result;
     }, [data, filterRange, selectedBranch, selectedSource, searchDate, minWalkins, minSales]);
+
+    const applyManualFilters = () => {
+        setSearchDate(pendingFilters.date);
+        setSelectedSource(pendingFilters.source);
+        setMinWalkins(pendingFilters.minWalkins);
+        setMinSales(pendingFilters.minSales);
+    };
+
+    const resetManualFilters = () => {
+        setPendingFilters({ date: "", source: "All Sources", minWalkins: "", minSales: "" });
+        setSearchDate("");
+        setSelectedSource("All Sources");
+        setMinWalkins("");
+        setMinSales("");
+    };
 
     const stats = useMemo(() => {
         const totalWalkins = filteredData.reduce((acc, curr) => acc + curr.walkins, 0);
@@ -349,46 +367,62 @@ export default function AdminDashboard({ data }: { data: AnalyticsEntry[] }) {
                     </div>
 
                     {/* Advanced Filters Bar */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Date</label>
-                            <input
-                                type="text"
-                                placeholder="YYYY-MM-DD"
-                                value={searchDate}
-                                onChange={(e) => setSearchDate(e.target.value)}
-                                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                            />
+                    <div className="flex flex-col md:flex-row items-end gap-4 pt-4 border-t border-slate-100">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 flex-grow">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Date</label>
+                                <input
+                                    type="text"
+                                    placeholder="YYYY-MM-DD"
+                                    value={pendingFilters.date}
+                                    onChange={(e) => setPendingFilters({ ...pendingFilters, date: e.target.value })}
+                                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Source</label>
+                                <select
+                                    value={pendingFilters.source}
+                                    onChange={(e) => setPendingFilters({ ...pendingFilters, source: e.target.value })}
+                                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                >
+                                    {sources.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Min Walk-ins</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={pendingFilters.minWalkins}
+                                    onChange={(e) => setPendingFilters({ ...pendingFilters, minWalkins: e.target.value })}
+                                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Min Sales</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={pendingFilters.minSales}
+                                    onChange={(e) => setPendingFilters({ ...pendingFilters, minSales: e.target.value })}
+                                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                />
+                            </div>
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Source</label>
-                            <select
-                                value={selectedSource}
-                                onChange={(e) => setSelectedSource(e.target.value)}
-                                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                                onClick={resetManualFilters}
+                                className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
                             >
-                                {sources.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Min Walk-ins</label>
-                            <input
-                                type="number"
-                                placeholder="0"
-                                value={minWalkins}
-                                onChange={(e) => setMinWalkins(e.target.value)}
-                                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Min Sales</label>
-                            <input
-                                type="number"
-                                placeholder="0"
-                                value={minSales}
-                                onChange={(e) => setMinSales(e.target.value)}
-                                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                            />
+                                Reset
+                            </button>
+                            <button
+                                onClick={applyManualFilters}
+                                className="flex-grow md:flex-grow-0 px-6 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                            >
+                                Apply Filters
+                            </button>
                         </div>
                     </div>
                 </div>
